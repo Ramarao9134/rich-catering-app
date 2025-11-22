@@ -18,6 +18,47 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+// Initialize sample data endpoint (for first-time setup)
+app.post('/api/init-data', async (req, res) => {
+  try {
+    const usersData = await readData('users')
+    if (usersData && usersData.users && usersData.users.length > 0) {
+      return res.json({ message: 'Data already initialized', users: usersData.users.length })
+    }
+    
+    // Initialize sample users
+    const sampleUsers = {
+      users: [
+        {
+          id: 1,
+          name: 'Admin User',
+          email: 'admin@rich.com',
+          phone: '+91 98765 43210',
+          passwordHash: 'admin123',
+          role: 'admin',
+          address: [],
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 2,
+          name: 'John Customer',
+          email: 'customer@rich.com',
+          phone: '+91 98765 43211',
+          passwordHash: 'customer123',
+          role: 'customer',
+          address: ['123 Main Street, Hyderabad'],
+          createdAt: new Date().toISOString()
+        }
+      ],
+      nextId: 3
+    }
+    await writeData('users', sampleUsers)
+    res.json({ success: true, message: 'Sample data initialized', users: sampleUsers.users })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Data storage paths
 const DATA_DIR = path.join(__dirname, 'data')
 const ensureDataDir = async () => {
@@ -47,8 +88,72 @@ const initDataFiles = async () => {
     const filePath = path.join(DATA_DIR, `${key}.json`)
     try {
       await fs.access(filePath)
+      // Check if file is empty or has no data, initialize with sample data
+      const existingData = await readData(key)
+      if (existingData && key === 'users' && (!existingData.users || existingData.users.length === 0)) {
+        // Initialize with sample users
+        const sampleUsers = {
+          users: [
+            {
+              id: 1,
+              name: 'Admin User',
+              email: 'admin@rich.com',
+              phone: '+91 98765 43210',
+              passwordHash: 'admin123',
+              role: 'admin',
+              address: [],
+              createdAt: new Date().toISOString()
+            },
+            {
+              id: 2,
+              name: 'John Customer',
+              email: 'customer@rich.com',
+              phone: '+91 98765 43211',
+              passwordHash: 'customer123',
+              role: 'customer',
+              address: ['123 Main Street, Hyderabad'],
+              createdAt: new Date().toISOString()
+            }
+          ],
+          nextId: 3
+        }
+        await writeData(key, sampleUsers)
+        console.log('✓ Initialized sample users')
+      }
     } catch {
-      await fs.writeFile(filePath, JSON.stringify(defaultData, null, 2))
+      // File doesn't exist, create it
+      if (key === 'users') {
+        // Initialize users with sample data
+        const sampleUsers = {
+          users: [
+            {
+              id: 1,
+              name: 'Admin User',
+              email: 'admin@rich.com',
+              phone: '+91 98765 43210',
+              passwordHash: 'admin123',
+              role: 'admin',
+              address: [],
+              createdAt: new Date().toISOString()
+            },
+            {
+              id: 2,
+              name: 'John Customer',
+              email: 'customer@rich.com',
+              phone: '+91 98765 43211',
+              passwordHash: 'customer123',
+              role: 'customer',
+              address: ['123 Main Street, Hyderabad'],
+              createdAt: new Date().toISOString()
+            }
+          ],
+          nextId: 3
+        }
+        await writeData(key, sampleUsers)
+        console.log('✓ Initialized sample users')
+      } else {
+        await writeData(key, defaultData)
+      }
     }
   }
 }
